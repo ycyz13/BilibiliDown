@@ -7,6 +7,8 @@ import org.springframework.stereotype.Controller;
 import ycyz.entity.Up;
 import ycyz.service.IUpService;
 
+import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -31,6 +33,7 @@ public class UpController {
     @PutMapping(value = "/{id}")
     public Up updateSyncTime(@PathVariable Long id, @RequestBody Up up) {
         up.setId(id);
+        up.setUpdateTime(LocalDateTime.now());
         this.upService.updateById(up);
         return up;
     }
