@@ -27,7 +27,7 @@ public class UpController {
 
     @GetMapping(value = "")
     public List<Up> findAll() {
-        return this.upService.list(new LambdaQueryWrapper<Up>().orderByAsc(Up::getId));
+        return this.upService.list(new LambdaQueryWrapper<Up>().eq(Up::getHandleStatus, 2).orderByAsc(Up::getId));
     }
 
     @PutMapping(value = "/{id}")
