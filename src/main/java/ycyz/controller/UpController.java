@@ -10,6 +10,7 @@ import ycyz.service.IUpService;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -26,8 +27,9 @@ public class UpController {
     private IUpService upService;
 
     @GetMapping(value = "")
-    public List<Up> findAll() {
-        return this.upService.list(new LambdaQueryWrapper<Up>().eq(Up::getHandleStatus, 2).orderByAsc(Up::getId));
+    public List<Up> findAll(@RequestParam(name = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+        return this.upService.list(new LambdaQueryWrapper<Up>().eq(Up::getHandleStatus, 2).orderByAsc(Up::getLastSyncTime))
+                .stream().limit(pageSize).collect(Collectors.toList());
     }
 
     @PutMapping(value = "/{id}")

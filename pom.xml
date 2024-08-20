@@ -65,6 +65,27 @@
             <artifactId>freemarker</artifactId>
             <version>2.3.28</version>
         </dependency>
+        <dependency>
+            <groupId>core</groupId>
+            <artifactId>core</artifactId>
+            <version>3.3.3</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/libs/core-3.3.3.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>jaf</groupId>
+            <artifactId>jaf</artifactId>
+            <version>1.1.1</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/libs/jaf-1.1.1-activation.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>javax</groupId>
+            <artifactId>mail</artifactId>
+            <version>1.6.2</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/libs/javax.mail-1.6.2.jar</systemPath>
+        </dependency>
     </dependencies>
 
     <build>
