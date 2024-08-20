@@ -23,10 +23,10 @@ public class DownloadService {
         String avId = iNeedAV.getValidID(args.getUrl());
         log.info("当前解析的id为：" + avId);
 
-        VideoInfo avInfo =iNeedAV.getVideoDetail(avId, Global.downloadFormat, false);
+        VideoInfo avInfo =iNeedAV.getVideoDetail(avId, Global.downloadFormat, true);
         for (ClipInfo clipInfo : avInfo.getClips().values()) {
             log.info(new Gson().toJson(clipInfo));
-            iNeedAV.downloadClip(clipInfo.getLinks().get(0), avId, iNeedAV.getInputParser(avId).getVideoLinkQN(), clipInfo.getPage());
+            iNeedAV.downloadClip(clipInfo.getLinks().values().iterator().next(), clipInfo.getAvId(), iNeedAV.getInputParser(avId).getVideoLinkQN(), clipInfo.getPage());
         }
     }
 }
