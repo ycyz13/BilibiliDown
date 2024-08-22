@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.regex.Matcher;
 
+import nicelee.bilibili.exceptions.BilibiliError;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -188,7 +189,7 @@ public abstract class AbstractBaseParser implements IInputParser {
 			return new int[] { 120, 116, 112, 80, 74, 64, 32, 16 };
 		}
 	}
-	
+
 	private int[] getVideoQNList_JudgeTypeFirst(String bvId, String cid) {
 		HttpHeaders headers = new HttpHeaders();
 		JSONArray jArr = null;
@@ -230,7 +231,7 @@ public abstract class AbstractBaseParser implements IInputParser {
 		}
 		return qnList;
 	}
-	
+
 	private int[] getVideoQNList_TryNormalTypeFirst(String bvId, String cid) {
 		HttpHeaders headers = new HttpHeaders();
 		JSONArray jArr = null;
@@ -327,7 +328,7 @@ public abstract class AbstractBaseParser implements IInputParser {
 					return "https:" + sub.getString("subtitle_url");
 				}
 			}
-			
+
 			return "https:" + subList.getJSONObject(0).getString("subtitle_url");
 		} catch (Exception e) {
 			String tips = Global.isLogin? "未能找到字幕 " + bvId : "未能找到字幕，这可能是没有登录造成的。" + bvId;
@@ -402,6 +403,11 @@ public abstract class AbstractBaseParser implements IInputParser {
 			jObj = new JSONObject(json).getJSONObject("result");
 		}
 		int linkQN = jObj.getInt("quality");
+		int highestQN = jObj.getJSONArray("support_formats").getJSONObject(0).getInt("quality");
+		if (linkQN != highestQN) {
+			String errMsg = String.format("最佳质量为: %d, 实际获得质量为: %d, 可能会员已失效.", highestQN, linkQN);
+			throw new BilibiliError(errMsg);
+		}
 		if(qn != linkQN) { // 只有和预期不符才会去判断
 			// 有时候，api返回的列表中含有比指定清晰度更高的内容
 			JSONObject dash = jObj.optJSONObject("dash");

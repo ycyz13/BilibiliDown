@@ -8,6 +8,7 @@ public class DownloadTest {
     @Test
     public void testDownload(){
         DownloadService service = new DownloadService();
-        service.downloazdByPage(DownloadArgs.builder().url("https://space.bilibili.com/454209280").build());
+        service.login();
+        service.downloazdByPage(DownloadArgs.builder().url("https://space.bilibili.com/2615982").build());
     }
 }
