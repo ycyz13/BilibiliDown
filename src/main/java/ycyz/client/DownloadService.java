@@ -1,47 +1,69 @@
 package ycyz.client;
 
 import com.google.gson.Gson;
-import lombok.extern.log4j.Log4j;
 import lombok.extern.slf4j.Slf4j;
 import nicelee.bilibili.INeedAV;
 import nicelee.bilibili.INeedLogin;
+import nicelee.bilibili.exceptions.BilibiliError;
 import nicelee.bilibili.model.ClipInfo;
 import nicelee.bilibili.model.FavList;
 import nicelee.bilibili.model.VideoInfo;
-import nicelee.bilibili.util.*;
+import nicelee.bilibili.util.ConfigUtil;
+import nicelee.bilibili.util.HttpCookies;
+import nicelee.bilibili.util.HttpHeaders;
+import nicelee.bilibili.util.HttpRequestUtil;
 import nicelee.ui.Global;
 import nicelee.ui.thread.CookieRefreshThread;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import javax.swing.*;
 import java.awt.*;
 import java.net.HttpCookie;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
+@Component
 public class DownloadService {
-    public void downloazdByPage(DownloadArgs args) {
-        // 初始化配置 TODO：系统启动时加载
-        ConfigUtil.initConfigs();
+    private static String UP_ALL_VIDEO_URL_PREFIX =  "https://space.bilibili.com/";
 
+    @PostConstruct
+    public void init(){
+        ConfigUtil.initConfigs();
+    }
+
+    public int downloazdByPage(DownloadArgs args) {
+        String url = UP_ALL_VIDEO_URL_PREFIX + args.getUid();
         INeedAV iNeedAV = new INeedAV();
-        String avId = iNeedAV.getValidID(args.getUrl());
+        String avId = iNeedAV.getValidID(url);
         log.info("当前解析的id为：" + avId);
 
-
-
         VideoInfo avInfo =iNeedAV.getVideoDetail(avId, Global.downloadFormat, true);
-
+        int downloadCount = 0;
+        // todo: 分页到最后
         for (ClipInfo clipInfo : avInfo.getClips().values()) {
-            log.info(new Gson().toJson(clipInfo));
+            if (args.getStartTime().getNano() >= clipInfo.getcTime()) {
+                log.info(clipInfo.getTitle() + "在上次更新日期之前, " + clipInfo.getUpName() + "更新完毕");
+                break;
+            }
+            // todo: 下载前插入记录到投稿表，检查有无重复。下载后更新状态为“已下载”
+            log.debug(new Gson().toJson(clipInfo));
             String urlQuery = iNeedAV.getInputParser(clipInfo.getAvId()).getVideoLink(clipInfo.getAvId(), String.valueOf(clipInfo.getcId()), 127, Global.downloadFormat); //该步含网络查询， 可能较为耗时
             int realQN = iNeedAV.getInputParser(clipInfo.getAvId()).getVideoLinkQN();
             iNeedAV.downloadClip(urlQuery, clipInfo.getAvId(), realQN, clipInfo.getPage());
+            downloadCount++;
+            try {
+                Thread.sleep(5000); // 每个下载间隔5s
+            } catch (Exception e) {
+                log.error("sleep异常", e);
+            }
         }
+
+        return downloadCount;
     }
 
     public void login(){
@@ -81,6 +103,7 @@ public class DownloadService {
                 System.out.println("本地Cookies验证无效...");
                 // 置空全局Cookie
                 HttpCookies.setGlobalCookies(null);
+                throw new BilibiliError("登录失败，请检查cookie");
             }
         }
     }
