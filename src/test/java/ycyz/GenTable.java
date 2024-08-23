@@ -11,7 +11,7 @@ import java.util.Collections;
 public class GenTable {
     @Test
     public void testGen(){
-        String url = "jdbc:mysql://localhost:3306/movie?useUnicode=true&characterEncoding=utf8mb4&useSSL=true";
+        String url = "jdbc:mysql://localhost:3306/movie?useUnicode=true&characterEncoding=utf8&useSSL=true";
         String username = "root";
         String password = "123456";
         String author = "ycyz";
@@ -32,7 +32,7 @@ public class GenTable {
                             .pathInfo(Collections.singletonMap(OutputFile.xml, outputFileXml)); // 设置mapperXml生成路径
                 })
                 .strategyConfig(builder -> {
-                    builder.addInclude("up") // 设置需要生成的表名
+                    builder.addInclude("vedio") // 设置需要生成的表名
                         .entityBuilder().enableLombok();  // lombok模式
 //                            .addTablePrefix("t_", "c_"); // 设置过滤表前缀
                 })
