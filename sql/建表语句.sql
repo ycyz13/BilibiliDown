@@ -15,9 +15,10 @@ CREATE TABLE up (
 CREATE TABLE vedio (
     id bigint(20) AUTO_INCREMENT NOT NULL COMMENT '主键',
     up_uid varchar(64) NOT NULL COMMENT 'up主用户id',
-    handle_status int(3) NOT NULL COMMENT '处理状态。1：待同步，2：同步完毕',
+    handle_status int NOT NULL COMMENT '处理状态。1：待同步，2：同步完毕',
     bv_id varchar(64) NOT NULL COMMENT 'bvId',
     cid varchar(64) NOT NULL COMMENT 'cid',
+    bv_page int NOT NULL COMMENT '投稿内的选集',
     av_title varchar(128) NOT NULL COMMENT 'av标题',
     title varchar(128) NOT NULL COMMENT '标题',
     file_name varchar(128) NOT NULL COMMENT '下载文件名称',
@@ -26,6 +27,5 @@ CREATE TABLE vedio (
     update_time datetime NOT NULL COMMENT '更新记录时间',
     create_time datetime NOT NULL COMMENT '创建记录时间',
     PRIMARY KEY (id),
-    UNIQUE KEY uniq_bv_id(bv_id),
-    UNIQUE KEY uniq_up_uid(up_uid)
+    UNIQUE KEY uniq_bv_id_cid(bv_id, cid)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='投稿表'
