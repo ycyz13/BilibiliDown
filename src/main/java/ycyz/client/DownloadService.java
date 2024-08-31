@@ -1,5 +1,6 @@
 package ycyz.client;
 
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import nicelee.bilibili.INeedAV;
@@ -16,14 +17,24 @@ import nicelee.ui.Global;
 import nicelee.ui.thread.CookieRefreshThread;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import ycyz.entity.Vedio;
+import ycyz.service.IVedioService;
 
 import javax.annotation.PostConstruct;
 import javax.swing.*;
 import java.awt.*;
+import java.io.File;
 import java.net.HttpCookie;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Slf4j
@@ -31,31 +42,83 @@ import java.util.List;
 public class DownloadService {
     private static String UP_ALL_VIDEO_URL_PREFIX =  "https://space.bilibili.com/";
 
+    @Autowired
+    private IVedioService vedioService;
+
     @PostConstruct
     public void init(){
         ConfigUtil.initConfigs();
     }
 
+    // todo: 返回是否有错误，让调用方不更新up的时间
     public int downloazdByPage(DownloadArgs args) {
         String url = UP_ALL_VIDEO_URL_PREFIX + args.getUid();
         INeedAV iNeedAV = new INeedAV();
-        String avId = iNeedAV.getValidID(url);
-        log.info("当前解析的id为：" + avId);
+        String avUrl = iNeedAV.getValidID(url);
+        log.info("当前解析的avUrl为：" + avUrl);
 
-        VideoInfo avInfo =iNeedAV.getVideoDetail(avId, Global.downloadFormat, true);
+        VideoInfo avInfo =iNeedAV.getVideoDetail(avUrl, Global.downloadFormat, true);
         int downloadCount = 0;
         // todo: 分页到最后
         for (ClipInfo clipInfo : avInfo.getClips().values()) {
+            String avTitle = clipInfo.getAvTitle();
+            String title = clipInfo.getTitle();
             if (args.getStartTime().getNano() >= clipInfo.getcTime()) {
                 log.info(clipInfo.getTitle() + "在上次更新日期之前, " + clipInfo.getUpName() + "更新完毕");
                 break;
             }
-            // todo: 下载前插入记录到投稿表，检查有无重复。下载后更新状态为“已下载”
             log.debug(new Gson().toJson(clipInfo));
-            String urlQuery = iNeedAV.getInputParser(clipInfo.getAvId()).getVideoLink(clipInfo.getAvId(), String.valueOf(clipInfo.getcId()), 127, Global.downloadFormat); //该步含网络查询， 可能较为耗时
-            int realQN = iNeedAV.getInputParser(clipInfo.getAvId()).getVideoLinkQN();
-            iNeedAV.downloadClip(urlQuery, clipInfo.getAvId(), realQN, clipInfo.getPage());
-            downloadCount++;
+            // todo: 下载前插入记录到投稿表，检查有无重复。下载后更新状态为“已下载”
+            Vedio vedio = vedioService.lambdaQuery().eq(Vedio::getBvId, clipInfo.getAvId()).eq(Vedio::getCid, String.valueOf(clipInfo.getcId()))
+                    .one();
+            if (vedio != null) {
+                if (vedio.getHandleStatus() == 2) {
+                    log.info("该视频已经下载过，不重复处理: " + new Gson().toJson(clipInfo));
+                } else if (vedio.getHandleStatus() == 1) {
+                    log.warn("该视频在其他线程处理，或等待定时任务补齐 " + new Gson().toJson(clipInfo));
+                }
+            } else {
+                LocalDateTime bvCreateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(clipInfo.getcTime()), ZoneId.systemDefault());
+                vedio = Vedio.builder().bvId(clipInfo.getAvId()).cid(String.valueOf(clipInfo.getcId())).avTitle(clipInfo.getAvTitle())
+                            .title(clipInfo.getTitle()).upUid(clipInfo.getUpId()).handleStatus(1).bvPage(clipInfo.getPage())
+                            .bvCreateTime(bvCreateTime).fileName("").storePath("").qn(-1)
+                            .build();
+                vedioService.save(vedio);
+                String urlQuery = iNeedAV.getInputParser(clipInfo.getAvId()).getVideoLink(clipInfo.getAvId(), String.valueOf(clipInfo.getcId()), 127, Global.downloadFormat); //该步含网络查询， 可能较为耗时
+                int realQN = iNeedAV.getInputParser(clipInfo.getAvId()).getVideoLinkQN();
+                // 更新qn, name和storePath
+                vedio.setQn(realQN);
+                boolean downloadResult = iNeedAV.downloadClip(urlQuery, clipInfo.getAvId(), realQN, clipInfo.getPage());
+                if (!downloadResult) {
+                    log.error("该视频在其他线程处理，或等待定时任务补齐 " + new Gson().toJson(clipInfo));
+                    break;
+                }
+
+                String originName = String.format("%s-%d-p%d.mp4", avTitle, realQN, clipInfo.getPage());  // todo: 通过download实现类获取真正的后缀
+                String targetName = "";
+                String date = bvCreateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                // todo: 清晰度转换
+                if (StringUtils.isEmpty(clipInfo.getTitle()) || StringUtils.equals(clipInfo.getAvTitle(), clipInfo.getTitle())) {
+                    // 2024-01-01_[up名称]_[标题]_[清晰度].mp4
+                    targetName = String.format("%s-%s-%s-%d", date, args.getUpName(), avTitle, realQN);
+                } else {
+                    // 2024-01-01_[up名称]_[标题]_[p0]_[子标题]_[清晰度].mp4
+                    targetName = String.format("%s-%s-%s-p%d-%s-%d.mp4", date, args.getUpName(), avTitle, clipInfo.getPage()
+                    ,clipInfo.getTitle(), realQN);
+                }
+                File originFile = new File(Global.savePath + originName);
+                File targetFile = new File(Global.savePath + targetName);
+                boolean renameResult = originFile.renameTo(targetFile);
+                if (!renameResult) {
+                    log.error("重命名失败:  " + new Gson().toJson(clipInfo));
+                    break;
+                }
+                downloadCount++;
+                vedio.setHandleStatus(2);
+                // todo: 0：重命名失败问题；1异常处理；2更新投稿表
+                vedioService.save(vedio);
+            }
+
             try {
                 Thread.sleep(5000); // 每个下载间隔5s
             } catch (Exception e) {

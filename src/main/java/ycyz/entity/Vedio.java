@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -17,6 +19,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
+@Builder
 public class Vedio implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -43,9 +46,16 @@ public class Vedio implements Serializable {
     private String bvId;
 
     /**
+     * 投稿时间
+     */
+    private LocalDateTime bvCreateTime;
+
+    /**
      * cid
      */
     private String cid;
+
+    private Integer bvPage;
 
     /**
      * av标题
