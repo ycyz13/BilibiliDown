@@ -67,7 +67,7 @@ public class DownloadService {
             for (ClipInfo clipInfo : avInfo.getClips().values()) {
                 String avTitle = clipInfo.getAvTitle();
                 String bvId = clipInfo.getAvId();
-                if (args.getStartTime().getNano() >= clipInfo.getcTime()) {
+                if (args.getStartTime().atZone(ZoneId.systemDefault()).toInstant().getEpochSecond()*1000 >= clipInfo.getcTime()) {
                     log.info(clipInfo.getTitle() + "在上次更新日期之前, " + clipInfo.getUpName() + "更新完毕");
                     stopFlag = true;
                     break;
