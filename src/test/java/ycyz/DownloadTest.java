@@ -22,6 +22,6 @@ public class DownloadTest {
     public void testDownload(){
         downloadService.login();
         downloadService.downloazdByPage(DownloadArgs.builder().uid("2615982").startTime(LocalDateTime.
-                parse("2022-01-01T10:30:59")).build());
+                parse("2022-01-01T10:30:59")).upName("测试up").build());
     }
 }
