@@ -192,7 +192,7 @@ public class API {
 
 	public static synchronized String getFingerprint() {
 		String cookie = null;
-		File fingerprint = ResourcesUtil.sourceOf("./config/fingerprint.config");
+		File fingerprint = new File("./config/fingerprint.config");
 		if (fingerprint.exists()) {
 			cookie = ResourcesUtil.readAll(fingerprint);
 			Pattern p = Pattern.compile("b_nut=([^;]+)");

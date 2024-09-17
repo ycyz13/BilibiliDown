@@ -113,8 +113,13 @@ public class DownloadService {
                                 ,clipInfo.getTitle(), VideoQualityEnum.getQualityDescript(realQN));
                     }
                     String rootPath = "./B站小姐姐/";
+                    String upDirPath = rootPath + args.getBizNo() + "-" + args.getUpName() + "/";
+                    File upDir = new File(upDirPath);
+                    if (!upDir.exists()) {
+                        upDir.mkdirs();
+                    }
                     File originFile = new File(Global.savePath + originName);
-                    File targetFile = new File(rootPath + args.getUpName() + "/" + targetName);
+                    File targetFile = new File(upDirPath + targetName);
                     boolean renameResult = originFile.renameTo(targetFile);
                     if (!renameResult) {
                         log.error("重命名失败:  " + new Gson().toJson(clipInfo));
@@ -161,19 +166,19 @@ public class DownloadService {
         cookiesStr = inl.readCookies();
         // 检查有没有本地cookie配置
         if (cookiesStr != null) {
-            System.out.println("检查到存在本地Cookies...");
+            log.info("检查到存在本地Cookies...");
             List<HttpCookie> cookies = HttpCookies.convertCookies(cookiesStr);
             // 成功登录后即返回,不再进行二维码扫码工作
             if (inl.getLoginStatus(cookies)) {
-                System.out.println("本地Cookies验证有效...");
+                log.info("本地Cookies验证有效...");
                 // 设置全局Cookie
                 HttpCookies.setGlobalCookies(cookies);
                 // 初始化用户数据显示
 //                initUserInfo(inl);
-                System.out.println("成功登录...");
+                log.info("成功登录...");
                 Global.isLogin = true;
             } else {
-                System.out.println("本地Cookies验证无效...");
+                log.info("本地Cookies验证无效...");
                 // 置空全局Cookie
                 HttpCookies.setGlobalCookies(null);
                 throw new BilibiliError("登录失败，请检查cookie");

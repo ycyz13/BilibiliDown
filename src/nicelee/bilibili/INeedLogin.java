@@ -123,7 +123,7 @@ public class INeedLogin {
 	 * 
 	 */
 	public void saveCookiesAndToken() {
-		File file = ResourcesUtil.sourceOf("./config/cookies.config");
+		File file = new File("./config/cookies.config");
 		try {
 			OutputStreamWriter fileWriter = new OutputStreamWriter(new FileOutputStream(file), "utf-8");
 			BufferedWriter oos = new BufferedWriter(fileWriter);
@@ -147,7 +147,7 @@ public class INeedLogin {
 	 * @return
 	 */
 	public String readCookies() {
-		File file = ResourcesUtil.sourceOf("./config/cookies.config");
+		File file = new File("./config/cookies.config");
 		return ResourcesUtil.readAll(file);
 	}
 
