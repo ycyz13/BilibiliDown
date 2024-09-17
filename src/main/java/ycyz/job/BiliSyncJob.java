@@ -3,6 +3,7 @@ package ycyz.job;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import ycyz.client.DownloadArgs;
@@ -24,8 +25,9 @@ public class BiliSyncJob {
      * 启动后延迟30秒开始
      * 两次同步间隔30分钟
      */
-    @Scheduled(initialDelay = 30 * 1000, fixedDelay = 30 * 60 * 1000)
+    @Scheduled(initialDelay = 30 * 1000, fixedDelay = 3 * 60 * 1000)
     public void syncUpVedio(){
+        log.info(String.format("开始同步up投稿"));
         List<Up> ups = upService.lambdaQuery().orderByAsc(Up::getLastSyncTime).list();
         downloadService.login();
         int totalCount = 0;

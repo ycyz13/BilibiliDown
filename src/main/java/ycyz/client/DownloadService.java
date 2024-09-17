@@ -106,14 +106,15 @@ public class DownloadService {
 
                     if (StringUtils.isEmpty(clipInfo.getTitle()) || StringUtils.equals(clipInfo.getAvTitle(), clipInfo.getTitle())) {
                         // 2024-01-01_[up名称]_[标题]_[清晰度].mp4
-                        targetName = String.format("%s-%s-%s-%s", date, args.getUpName(), avTitle, VideoQualityEnum.getQualityDescript(realQN));
+                        targetName = String.format("%s-%s-%s-%s.mp4", date, args.getUpName(), avTitle, VideoQualityEnum.getQualityDescript(realQN));
                     } else {
                         // 2024-01-01_[up名称]_[标题]_[p0]_[子标题]_[清晰度].mp4
                         targetName = String.format("%s-%s-%s-p%d-%s-%s.mp4", date, args.getUpName(), avTitle, clipInfo.getPage()
                                 ,clipInfo.getTitle(), VideoQualityEnum.getQualityDescript(realQN));
                     }
+                    String rootPath = "./B站小姐姐/";
                     File originFile = new File(Global.savePath + originName);
-                    File targetFile = new File(Global.savePath + targetName);
+                    File targetFile = new File(rootPath + args.getUpName() + "/" + targetName);
                     boolean renameResult = originFile.renameTo(targetFile);
                     if (!renameResult) {
                         log.error("重命名失败:  " + new Gson().toJson(clipInfo));
