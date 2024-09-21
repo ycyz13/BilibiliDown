@@ -1,5 +1,6 @@
 package ycyz.client;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.google.gson.Gson;
@@ -18,7 +19,9 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import ycyz.entity.Up;
 import ycyz.entity.Vedio;
+import ycyz.service.IUpService;
 import ycyz.service.IVedioService;
 
 import javax.annotation.PostConstruct;
@@ -33,15 +36,20 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
 public class DownloadService {
     private static String UP_ALL_VIDEO_URL_PREFIX =  "https://space.bilibili.com/";
+    private static String BV_PREFIX = "https://www.bilibili.com/video/";
 
     @Autowired
     private IVedioService vedioService;
+    @Autowired
+    private IUpService upService;
 
     @PostConstruct
     public void init(){
@@ -64,9 +72,10 @@ public class DownloadService {
             if (avInfo == null || avInfo.getClips() == null || avInfo.getClips().size() == 0) {
                 break;
             }
+
+            Map<String, Integer> bvCountMap = avInfo.getClips().values().stream().collect(Collectors.toMap(ClipInfo::getAvId, c -> 1, Integer::sum));
+
             for (ClipInfo clipInfo : avInfo.getClips().values()) {
-                String avTitle = clipInfo.getAvTitle();
-                String bvId = clipInfo.getAvId();
                 if (args.getStartTime().atZone(ZoneId.systemDefault()).toInstant().getEpochSecond()*1000 >= clipInfo.getcTime()) {
                     log.info(clipInfo.getTitle() + "在上次更新日期之前, " + clipInfo.getUpName() + "更新完毕");
                     stopFlag = true;
@@ -88,49 +97,30 @@ public class DownloadService {
                             .bvCreateTime(bvCreateTime).fileName("").storePath("").qn(-1)
                             .build();
                     vedioService.save(vedio);
-                    String urlQuery = iNeedAV.getInputParser(clipInfo.getAvId()).getVideoLink(clipInfo.getAvId(), String.valueOf(clipInfo.getcId()), 127, Global.downloadFormat); //该步含网络查询， 可能较为耗时
-                    int realQN = iNeedAV.getInputParser(clipInfo.getAvId()).getVideoLinkQN();
-                    // 更新qn
-                    vedioService.update(null, new UpdateWrapper<Vedio>().lambda().eq(Vedio::getId, vedio.getId())
-                            .set(Vedio::getQn, realQN));
-                    boolean downloadResult = iNeedAV.downloadClip(urlQuery, clipInfo.getAvId(), realQN, clipInfo.getPage());
-                    if (!downloadResult) {
-                        log.error("该视频在其他线程处理，或等待定时任务补齐 " + new Gson().toJson(clipInfo));
-                        break;
-                    }
+                    try {
+                        String urlQuery = iNeedAV.getInputParser(clipInfo.getAvId()).getVideoLink(clipInfo.getAvId(), String.valueOf(clipInfo.getcId()), 127, Global.downloadFormat); //该步含网络查询， 可能较为耗时
+                        int realQN = iNeedAV.getInputParser(clipInfo.getAvId()).getVideoLinkQN();
+                        // 更新qn
+                        vedioService.update(null, new UpdateWrapper<Vedio>().lambda().eq(Vedio::getId, vedio.getId())
+                                .set(Vedio::getQn, realQN));
+                        boolean downloadResult = iNeedAV.downloadClip(urlQuery, clipInfo.getAvId(), realQN, clipInfo.getPage());
+                        if (!downloadResult) {
+                            log.error("该视频在其他线程处理，或等待定时任务补齐 " + new Gson().toJson(clipInfo));
+                            continue;
+                        }
 
-                    // 原始名称：[bId]-[qutity]-[pn]
-                    String originName = String.format("%s-%d-p%d.mp4", bvId, realQN, clipInfo.getPage());
-                    String targetName = "";
-                    String date = bvCreateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                        boolean multiCV = bvCountMap.get(clipInfo.getAvId()) > 1;
+                        String targetFilePath = moveAndRename(args, clipInfo, realQN, multiCV);
 
-                    if (StringUtils.isEmpty(clipInfo.getTitle()) || StringUtils.equals(clipInfo.getAvTitle(), clipInfo.getTitle())) {
-                        // 2024-01-01_[up名称]_[标题]_[清晰度].mp4
-                        targetName = String.format("%s-%s-%s-%s.mp4", date, args.getUpName(), avTitle, VideoQualityEnum.getQualityDescript(realQN));
-                    } else {
-                        // 2024-01-01_[up名称]_[标题]_[p0]_[子标题]_[清晰度].mp4
-                        targetName = String.format("%s-%s-%s-p%d-%s-%s.mp4", date, args.getUpName(), avTitle, clipInfo.getPage()
-                                ,clipInfo.getTitle(), VideoQualityEnum.getQualityDescript(realQN));
+                        downloadCount++;
+                        vedio.setHandleStatus(2);
+                        vedioService.update(null, new UpdateWrapper<Vedio>().lambda().eq(Vedio::getId, vedio.getId())
+                                .set(Vedio::getHandleStatus, 2).set(Vedio::getFileName, targetFilePath)
+                                .set(Vedio::getStorePath, targetFilePath)
+                        );
+                    } catch (Exception e) {
+                        log.error(String.format("下载后处理失败, vedio id: %s", vedio.getId()), e);
                     }
-                    String rootPath = "./B站小姐姐/";
-                    String upDirPath = rootPath + args.getBizNo() + "-" + args.getUpName() + "/";
-                    File upDir = new File(upDirPath);
-                    if (!upDir.exists()) {
-                        upDir.mkdirs();
-                    }
-                    File originFile = new File(Global.savePath + originName);
-                    File targetFile = new File(upDirPath + targetName);
-                    boolean renameResult = originFile.renameTo(targetFile);
-                    if (!renameResult) {
-                        log.error("重命名失败:  " + new Gson().toJson(clipInfo));
-                        throw new BilibiliError("重命名失敗:" + originFile.getAbsolutePath());
-                    }
-                    downloadCount++;
-                    vedio.setHandleStatus(2);
-                    vedioService.update(null, new UpdateWrapper<Vedio>().lambda().eq(Vedio::getId, vedio.getId())
-                            .set(Vedio::getHandleStatus, 2).set(Vedio::getFileName, targetFile.getName())
-                            .set(Vedio::getStorePath, targetFile.getAbsolutePath())
-                    );
                 }
 
                 try {
@@ -142,6 +132,90 @@ public class DownloadService {
         }
 
         return downloadCount;
+    }
+
+    public void downloadByBv(Vedio vedio){
+        String bvId = vedio.getBvId();
+        String url = BV_PREFIX + bvId;
+        INeedAV iNeedAV = new INeedAV();
+
+        VideoInfo avInfo =iNeedAV.getVideoDetail(url, Global.downloadFormat, true);
+        boolean multiCV = avInfo.getClips().size() > 1;
+        for (ClipInfo clipInfo : avInfo.getClips().values()) {
+            if (StringUtils.equals(vedio.getBvId(), clipInfo.getAvId()) && StringUtils.equals(vedio.getCid(), String.valueOf(clipInfo.getcId()))) {
+                log.info(String.format("视频匹配，进行补充下载. vedio id: %s", vedio.getId()));
+            } else {
+                log.info(String.format("视频不匹配，continue. vedio id: %s", vedio.getId()));
+                continue;
+            }
+            log.info(String.format("bvid: %s, cid: %d, downloadUrl: %s", clipInfo.getAvId(), clipInfo.getcId(), new Gson().toJson(clipInfo.getLinks())));
+
+            String urlQuery = iNeedAV.getInputParser(clipInfo.getAvId()).getVideoLink(clipInfo.getAvId(), String.valueOf(clipInfo.getcId()), 127, Global.downloadFormat); //该步含网络查询， 可能较为耗时
+            int realQN = iNeedAV.getInputParser(clipInfo.getAvId()).getVideoLinkQN();
+            // 更新qn
+            vedioService.update(null, new UpdateWrapper<Vedio>().lambda().eq(Vedio::getId, vedio.getId())
+                    .set(Vedio::getQn, realQN));
+            boolean downloadResult = iNeedAV.downloadClip(urlQuery, clipInfo.getAvId(), realQN, clipInfo.getPage());
+            if (!downloadResult) {
+                log.error("下载失败 " + new Gson().toJson(clipInfo));
+                return;
+            }
+
+            try {
+                Up up = upService.getOne(new LambdaUpdateWrapper<Up>().eq(Up::getUid, vedio.getUpUid()));
+                DownloadArgs args = DownloadArgs.builder().uid(vedio.getUpUid()).upName(up.getUpName()).bizNo(up.getBizNo()).build();
+                String targetFilePath = moveAndRename(args, clipInfo, realQN, multiCV);
+
+                vedio.setHandleStatus(2);
+                vedioService.update(null, new UpdateWrapper<Vedio>().lambda().eq(Vedio::getId, vedio.getId())
+                        .set(Vedio::getHandleStatus, 2).set(Vedio::getFileName, targetFilePath)
+                        .set(Vedio::getStorePath, targetFilePath)
+                );
+            } catch (Exception e) {
+                log.error(String.format("下载后处理失败, vedio id: %s", vedio.getId()), e);
+            }
+
+            try {
+                Thread.sleep(5000); // 每个下载间隔5s
+            } catch (Exception e) {
+                log.error("sleep异常", e);
+            }
+        }
+
+    }
+
+    private String moveAndRename(DownloadArgs args, ClipInfo clipInfo, int realQN, boolean multiCV){
+        String avTitle = clipInfo.getAvTitle();
+        String bvId = clipInfo.getAvId();
+        LocalDateTime bvCreateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(clipInfo.getcTime()), ZoneId.systemDefault());
+
+        // 原始名称：[bId]-[qutity]-[pn]
+        String originName = String.format("%s-%d-p%d.mp4", bvId, realQN, clipInfo.getPage());
+        String targetName = "";
+        String date = bvCreateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+
+        if (!multiCV) {
+            // 2024-01-01_[up名称]_[标题]_[清晰度].mp4
+            targetName = String.format("%s-%s-%s-%s.mp4", date, args.getUpName(), avTitle, VideoQualityEnum.getQualityDescript(realQN));
+        } else {
+            // 2024-01-01_[up名称]_[标题]_[p0]_[子标题]_[清晰度].mp4
+            targetName = String.format("%s-%s-%s-p%d-%s-%s.mp4", date, args.getUpName(), avTitle, clipInfo.getPage()
+                    ,clipInfo.getTitle(), VideoQualityEnum.getQualityDescript(realQN));
+        }
+        String rootPath = "./B站小姐姐/";
+        String upDirPath = rootPath + args.getBizNo() + "-" + args.getUpName() + "/";
+        File upDir = new File(upDirPath);
+        if (!upDir.exists()) {
+            upDir.mkdirs();
+        }
+        File originFile = new File(Global.savePath + originName);
+        File targetFile = new File(upDirPath + targetName);
+        boolean renameResult = originFile.renameTo(targetFile);
+        if (!renameResult) {
+            log.error("重命名失败:  " + new Gson().toJson(clipInfo));
+            throw new BilibiliError("重命名失敗:" + originFile.getAbsolutePath());
+        }
+        return targetFile.getAbsolutePath();
     }
 
     public void login(){

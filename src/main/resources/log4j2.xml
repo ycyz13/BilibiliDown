@@ -11,7 +11,7 @@
         <!--日志输出格式-控制台-->
         <property name="PATTERN_CONSOLE">%d{yyyy-MM-dd HH:mm:ss.SSS} | %highlight{%-5p} | %cyan{%l} : %msg%n</property>
         <!--日志输出格式-文件-->
-        <property name="PATTERN_FILE">%d{yyyy-MM-dd HH:mm:ss.SSS} | %-5p | %C : %msg%n</property>
+        <property name="PATTERN_FILE">%d{yyyy-MM-dd HH:mm:ss.SSS} | %highlight{%-5p} | {%l} : %msg%n</property>
     </Properties>
 
     <!--定义日志输出目的地，内容和格式等-->
