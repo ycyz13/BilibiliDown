@@ -56,7 +56,7 @@ public class BiliSyncJob {
         // todo: 所有up更新完毕，发送统计邮。可单开job每日22点发送一次。
     }
 
-    @Scheduled(initialDelay = 15 * 1000, fixedDelay = 10 * 60 * 1000)
+//    @Scheduled(initialDelay = 15 * 1000, fixedDelay = 2 * 60 * 1000)
     public void syncErrorVedio(){
         log.info(String.format("开始同步异常vedio"));
         // 同步两小时前处理的异常视频
@@ -68,11 +68,12 @@ public class BiliSyncJob {
         for (Vedio vedio : vedios) {
             try {
                 downloadService.downloadByBv(vedio);
+                totalCount += 1;
                 Thread.sleep(5000);  // 每个vedio间隔5秒
             } catch (Exception e) {
                 log.error("补偿下载失败: " + new Gson().toJson(vedio), e);
             }
         }
-        log.info(String.format("同步异常vedio--END"));
+        log.info(String.format("同步异常vedio END, count: %d", totalCount));
     }
 }

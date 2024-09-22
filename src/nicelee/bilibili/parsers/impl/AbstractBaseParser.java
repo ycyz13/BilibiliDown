@@ -8,7 +8,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.regex.Matcher;
 
+import lombok.extern.slf4j.Slf4j;
+import nicelee.bilibili.enums.VideoQualityEnum;
 import nicelee.bilibili.exceptions.BilibiliError;
+import nicelee.bilibili.exceptions.ChargeException;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -29,6 +32,7 @@ import nicelee.bilibili.util.Logger;
 import nicelee.bilibili.util.convert.ConvertUtil;
 import nicelee.ui.Global;
 
+@Slf4j
 public abstract class AbstractBaseParser implements IInputParser {
 
 	protected Matcher matcher;
@@ -422,6 +426,11 @@ public abstract class AbstractBaseParser implements IInputParser {
 		paramSetter.setRealQN(linkQN);
 		String tips = String.format("%s:%s - 查询质量为: %d的链接, 得到质量为: %d的链接", bvId, cid, qn, linkQN);
 		Logger.println(tips);
+		if (linkQN == VideoQualityEnum.Q480P.getQn()) {
+			log.warn(String.format("视频质量为:%s，应该是充电视频，不下载", VideoQualityEnum.Q480P.getDescription()));
+			throw new ChargeException(String.format("视频质量为:%s，应该是充电视频，不下载", VideoQualityEnum.Q480P.getDescription()));
+		}
+
 		if(Global.alertIfQualityUnexpected && linkQN < 64 && qn > linkQN && Global.isLogin) {
 			String notes = tips + "\n该视频的最高画质清晰度较低，请更换相匹配的优先清晰度之后再进行尝试。\n" 
 					+ "如果你认为此处应当继续下载，而不是报错，请在配置页搜索 qualityUnexpected 并进行配置\n";

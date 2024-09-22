@@ -62,7 +62,7 @@ public enum VideoQualityEnum {
 		return qn;
 	}
 
-	String getDescription() {
+	public String getDescription() {
 		return description;
 	}
 }

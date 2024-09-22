@@ -9,6 +9,7 @@ import nicelee.bilibili.INeedAV;
 import nicelee.bilibili.INeedLogin;
 import nicelee.bilibili.enums.VideoQualityEnum;
 import nicelee.bilibili.exceptions.BilibiliError;
+import nicelee.bilibili.exceptions.ChargeException;
 import nicelee.bilibili.model.ClipInfo;
 import nicelee.bilibili.model.FavList;
 import nicelee.bilibili.model.VideoInfo;
@@ -31,6 +32,10 @@ import java.io.File;
 import java.net.HttpCookie;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -45,6 +50,8 @@ import java.util.stream.Collectors;
 public class DownloadService {
     private static String UP_ALL_VIDEO_URL_PREFIX =  "https://space.bilibili.com/";
     private static String BV_PREFIX = "https://www.bilibili.com/video/";
+
+    String illegalCharsRegex = "[\\\\/:*?\"<>|]";
 
     @Autowired
     private IVedioService vedioService;
@@ -110,16 +117,20 @@ public class DownloadService {
                         }
 
                         boolean multiCV = bvCountMap.get(clipInfo.getAvId()) > 1;
-                        String targetFilePath = moveAndRename(args, clipInfo, realQN, multiCV);
+                        Path targetFile = moveAndRename(args, clipInfo, realQN, multiCV);
 
                         downloadCount++;
                         vedio.setHandleStatus(2);
                         vedioService.update(null, new UpdateWrapper<Vedio>().lambda().eq(Vedio::getId, vedio.getId())
-                                .set(Vedio::getHandleStatus, 2).set(Vedio::getFileName, targetFilePath)
-                                .set(Vedio::getStorePath, targetFilePath)
+                                .set(Vedio::getHandleStatus, 2).set(Vedio::getFileName, targetFile.getFileName().toString())
+                                .set(Vedio::getStorePath, targetFile.toAbsolutePath().toString())
                         );
+                    } catch (ChargeException e1) {
+                        vedio.setHandleStatus(3);
+                        vedioService.updateById(vedio);
+                        log.warn(e1.getMessage());
                     } catch (Exception e) {
-                        log.error(String.format("下载后处理失败, vedio id: %s", vedio.getId()), e);
+                        log.error(String.format("下载处理失败, vedio id: %s", vedio.getId()), e);
                     }
                 }
 
@@ -150,29 +161,33 @@ public class DownloadService {
             }
             log.info(String.format("bvid: %s, cid: %d, downloadUrl: %s", clipInfo.getAvId(), clipInfo.getcId(), new Gson().toJson(clipInfo.getLinks())));
 
-            String urlQuery = iNeedAV.getInputParser(clipInfo.getAvId()).getVideoLink(clipInfo.getAvId(), String.valueOf(clipInfo.getcId()), 127, Global.downloadFormat); //该步含网络查询， 可能较为耗时
-            int realQN = iNeedAV.getInputParser(clipInfo.getAvId()).getVideoLinkQN();
-            // 更新qn
-            vedioService.update(null, new UpdateWrapper<Vedio>().lambda().eq(Vedio::getId, vedio.getId())
-                    .set(Vedio::getQn, realQN));
-            boolean downloadResult = iNeedAV.downloadClip(urlQuery, clipInfo.getAvId(), realQN, clipInfo.getPage());
-            if (!downloadResult) {
-                log.error("下载失败 " + new Gson().toJson(clipInfo));
-                return;
-            }
-
             try {
+                String urlQuery = iNeedAV.getInputParser(clipInfo.getAvId()).getVideoLink(clipInfo.getAvId(), String.valueOf(clipInfo.getcId()), 127, Global.downloadFormat); //该步含网络查询， 可能较为耗时
+                int realQN = iNeedAV.getInputParser(clipInfo.getAvId()).getVideoLinkQN();
+                // 更新qn
+                vedioService.update(null, new UpdateWrapper<Vedio>().lambda().eq(Vedio::getId, vedio.getId())
+                        .set(Vedio::getQn, realQN));
+                boolean downloadResult = iNeedAV.downloadClip(urlQuery, clipInfo.getAvId(), realQN, clipInfo.getPage());
+                if (!downloadResult) {
+                    log.error("下载失败 " + new Gson().toJson(clipInfo));
+                    return;
+                }
+
                 Up up = upService.getOne(new LambdaUpdateWrapper<Up>().eq(Up::getUid, vedio.getUpUid()));
                 DownloadArgs args = DownloadArgs.builder().uid(vedio.getUpUid()).upName(up.getUpName()).bizNo(up.getBizNo()).build();
-                String targetFilePath = moveAndRename(args, clipInfo, realQN, multiCV);
+                Path targetFile = moveAndRename(args, clipInfo, realQN, multiCV);
 
                 vedio.setHandleStatus(2);
                 vedioService.update(null, new UpdateWrapper<Vedio>().lambda().eq(Vedio::getId, vedio.getId())
-                        .set(Vedio::getHandleStatus, 2).set(Vedio::getFileName, targetFilePath)
-                        .set(Vedio::getStorePath, targetFilePath)
+                        .set(Vedio::getHandleStatus, 2).set(Vedio::getFileName, targetFile.getFileName().toString())
+                        .set(Vedio::getStorePath, targetFile.toAbsolutePath().toString())
                 );
-            } catch (Exception e) {
-                log.error(String.format("下载后处理失败, vedio id: %s", vedio.getId()), e);
+            } catch (ChargeException e1) {
+                vedio.setHandleStatus(3);
+                vedioService.updateById(vedio);
+                log.warn(e1.getMessage());
+            }catch (Exception e) {
+                throw new BilibiliError(String.format("下载处理失败, vedio id: %s", vedio.getId()), e);
             }
 
             try {
@@ -184,7 +199,7 @@ public class DownloadService {
 
     }
 
-    private String moveAndRename(DownloadArgs args, ClipInfo clipInfo, int realQN, boolean multiCV){
+    private Path moveAndRename(DownloadArgs args, ClipInfo clipInfo, int realQN, boolean multiCV){
         String avTitle = clipInfo.getAvTitle();
         String bvId = clipInfo.getAvId();
         LocalDateTime bvCreateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(clipInfo.getcTime()), ZoneId.systemDefault());
@@ -202,6 +217,10 @@ public class DownloadService {
             targetName = String.format("%s-%s-%s-p%d-%s-%s.mp4", date, args.getUpName(), avTitle, clipInfo.getPage()
                     ,clipInfo.getTitle(), VideoQualityEnum.getQualityDescript(realQN));
         }
+
+        // 去掉文件名中的非法字符
+        targetName = targetName.replaceAll(illegalCharsRegex, "");
+
         String rootPath = "./B站小姐姐/";
         String upDirPath = rootPath + args.getBizNo() + "-" + args.getUpName() + "/";
         File upDir = new File(upDirPath);
@@ -210,12 +229,15 @@ public class DownloadService {
         }
         File originFile = new File(Global.savePath + originName);
         File targetFile = new File(upDirPath + targetName);
-        boolean renameResult = originFile.renameTo(targetFile);
-        if (!renameResult) {
-            log.error("重命名失败:  " + new Gson().toJson(clipInfo));
-            throw new BilibiliError("重命名失敗:" + originFile.getAbsolutePath());
+//        boolean renameResult = originFile.renameTo(targetFile);
+        try{
+
+            Path newPath = Files.move(Paths.get(originFile.getAbsolutePath()), Paths.get(targetFile.getAbsolutePath()), StandardCopyOption.ATOMIC_MOVE);
+            log.info(String.format("移动成功: %s", newPath.getFileName()));
+            return newPath;
+        } catch (Exception e) {
+            throw new BilibiliError(String.format("移动文件失败。old：%s, target: %s  ", originFile.getAbsolutePath(), targetFile.getAbsolutePath()), e);
         }
-        return targetFile.getAbsolutePath();
     }
 
     public void login(){
