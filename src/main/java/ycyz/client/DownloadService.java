@@ -100,7 +100,7 @@ public class DownloadService {
                 } else {
                     LocalDateTime bvCreateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(clipInfo.getcTime()), ZoneId.systemDefault());
                     vedio = Vedio.builder().bvId(clipInfo.getAvId()).cid(String.valueOf(clipInfo.getcId())).avTitle(clipInfo.getAvTitle())
-                            .title(clipInfo.getTitle()).upUid(clipInfo.getUpId()).handleStatus(1).bvPage(clipInfo.getPage())
+                            .title(clipInfo.getTitle()).upUid(args.getUid()).handleStatus(1).bvPage(clipInfo.getPage())
                             .bvCreateTime(bvCreateTime).fileName("").storePath("").qn(-1)
                             .build();
                     vedioService.save(vedio);
@@ -128,7 +128,7 @@ public class DownloadService {
                     } catch (ChargeException e1) {
                         vedio.setHandleStatus(3);
                         vedioService.updateById(vedio);
-                        log.warn(e1.getMessage());
+                        log.warn(vedio.getAvTitle() + "-----" + e1.getMessage());
                     } catch (Exception e) {
                         log.error(String.format("下载处理失败, vedio id: %s", vedio.getId()), e);
                     }
@@ -185,7 +185,7 @@ public class DownloadService {
             } catch (ChargeException e1) {
                 vedio.setHandleStatus(3);
                 vedioService.updateById(vedio);
-                log.warn(e1.getMessage());
+                log.warn(vedio.getAvTitle() + "-----" + e1.getMessage());
             }catch (Exception e) {
                 throw new BilibiliError(String.format("下载处理失败, vedio id: %s", vedio.getId()), e);
             }
