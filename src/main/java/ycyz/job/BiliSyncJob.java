@@ -30,7 +30,7 @@ public class BiliSyncJob {
      * 启动后延迟30秒开始
      * 两次同步间隔30分钟
      */
-    @Scheduled(initialDelay = 30 * 1000, fixedDelay = 5 * 60 * 1000)
+    @Scheduled(initialDelay = 30 * 1000, fixedDelay = 30 * 60 * 1000)
     public void syncUpVedio(){
         log.info(String.format("开始同步up投稿"));
         List<Up> ups = upService.lambdaQuery().orderByAsc(Up::getLastSyncTime).list();
@@ -47,7 +47,7 @@ public class BiliSyncJob {
                 up.setLastSyncTime(now);
                 up.setUpdateTime(now);
                 upService.updateById(up);
-                Thread.sleep(30000);  // 每个up间隔30s
+                Thread.sleep(10000);  // 每个up间隔30s
             } catch (Exception e) {
                 log.error("下载失败: " + new Gson().toJson(up), e);
             }
@@ -56,12 +56,18 @@ public class BiliSyncJob {
         // todo: 所有up更新完毕，发送统计邮。可单开job每日22点发送一次。
     }
 
-//    @Scheduled(initialDelay = 15 * 1000, fixedDelay = 2 * 60 * 1000)
+    /**
+     * 启动后延迟60秒开始
+     * 两次同步间隔30分钟
+     */
+    @Scheduled(initialDelay = 60 * 1000, fixedDelay = 30 * 60 * 1000)
+//    @Scheduled(initialDelay = 60 * 1000, fixedDelay = 60 * 1000)
     public void syncErrorVedio(){
         log.info(String.format("开始同步异常vedio"));
-        // 同步两小时前处理的异常视频
+        // [60天前, 30分钟前]创建的异常视频才同步
         List<Vedio> vedios = vedioService.list(new LambdaQueryWrapper<Vedio>().eq(Vedio::getHandleStatus, 1)
-                .le(Vedio::getUpdateTime, LocalDateTime.now().plusHours(-2)));
+                        .between(Vedio::getUpdateTime, LocalDateTime.now().plusDays(-60), LocalDateTime.now().plusMinutes(-30))
+        );
         log.info(String.format("需要同步的异常vedio数量: %d", vedios.size()));
         downloadService.login();
         int totalCount = 0;

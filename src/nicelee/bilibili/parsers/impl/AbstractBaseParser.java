@@ -394,7 +394,9 @@ public abstract class AbstractBaseParser implements IInputParser {
 //			List cookie = downloadFormat == 2 ? null : HttpCookies.globalCookiesWithFingerprint();
 			List<HttpCookie> cookie = HttpCookies.globalCookiesWithFingerprint();
 			String json = util.getContent(url, headers.getBiliJsonAPIHeaders(bvId), cookie);
-			Logger.println(json);
+			if (json.contains("\"code\":87008")) {
+				throw new ChargeException(String.format("返回错误码:%s, 充电视频，无法下载", 87008));
+			}
 			jObj = new JSONObject(json).getJSONObject("data");
 		} else {
 			// 非普通类型

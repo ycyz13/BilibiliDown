@@ -1,5 +1,8 @@
 package nicelee.bilibili.exceptions;
 
+/**
+ * 充电视频无法下载异常
+ */
 public class ChargeException extends BilibiliError{
 
     public ChargeException(String message) {

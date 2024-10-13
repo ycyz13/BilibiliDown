@@ -5,6 +5,7 @@ CREATE TABLE up (
     up_name varchar(64) NOT NULL COMMENT 'up名称',
     handle_status int(3) NOT NULL COMMENT '处理状态。1：初始化，2：常规同步',
     last_sync_time datetime NOT NULL COMMENT '上次成功同步作品时间',
+    be_like varchar(1024) NOT NULL COMMENT '像谁',
     update_time datetime NOT NULL COMMENT '更新记录时间',
     create_time datetime NOT NULL COMMENT '创建记录时间',
     PRIMARY KEY (id),
