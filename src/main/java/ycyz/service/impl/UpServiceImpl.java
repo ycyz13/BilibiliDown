@@ -16,5 +16,7 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class UpServiceImpl extends ServiceImpl<UpMapper, Up> implements IUpService {
+    // 写一段初始化redis的代码
+
 
 }

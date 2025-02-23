@@ -250,7 +250,7 @@ public class URL4UPAllMedialistParser extends AbstractPageQueryParser<VideoInfo>
 				}
 			}
 		} catch (Exception e) {
-			// e.printStackTrace();
+			 e.printStackTrace();
 		}
 		return pageQueryResult;
 	}

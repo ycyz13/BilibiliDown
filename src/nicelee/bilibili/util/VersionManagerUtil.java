@@ -196,9 +196,9 @@ public class VersionManagerUtil {
 				CmdUtil.run(cmd, dir);
 			}else {
 				System.out.println(System.getProperty("os.name").toLowerCase());
-				copy(VersionManagerUtil.class.getResourceAsStream("/resources/update.sh"), new File(ResourcesUtil.baseDirectory(), "update.sh"), false);
-				CmdUtil.run(new String[]{"chmod", "+x", "./update.sh"}, dir);
-				String cmd[] = { "./update.sh", "@" + code, pid, "bilibili.log" }; // 最后一个为log，可以为/dev/null
+				copy(VersionManagerUtil.class.getResourceAsStream("/resources/update.sh"), new File(ResourcesUtil.baseDirectory(), "resources/update.sh"), false);
+				CmdUtil.run(new String[]{"chmod", "+x", "resources/update.sh"}, dir);
+				String cmd[] = {"resources/update.sh", "@" + code, pid, "bilibili.log" }; // 最后一个为log，可以为/dev/null
 				if(!CmdUtil.run(cmd, dir)) {
 					JOptionPane.showMessageDialog(null, "update.sh运行失败。你需要赋予其可执行权限。\n请关闭程序，然后执行命令行：\nsudo chmod +x ./update.sh && ./update.sh", "!", JOptionPane.INFORMATION_MESSAGE);
 					return;
