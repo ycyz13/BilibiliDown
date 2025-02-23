@@ -64,7 +64,18 @@ public class DownloadService {
     }
 
     public int downloazdByPage(DownloadArgs args) {
-        String url = UP_ALL_VIDEO_URL_PREFIX + args.getUid();
+        String url = null;
+        switch (args.getUrlType()) {
+            case UP:
+                url = UP_ALL_VIDEO_URL_PREFIX + args.getUid();
+                break;
+            case COLLECTION:
+                url = args.getUrl();
+                break;
+            default:
+                break;
+        }
+
         INeedAV iNeedAV = new INeedAV();
         String avUrlNoPage = iNeedAV.getValidID(url);
         log.info("当前解析的avUrl为：" + avUrlNoPage);
@@ -277,7 +288,7 @@ public class DownloadService {
                 log.info("本地Cookies验证无效...");
                 // 置空全局Cookie
                 HttpCookies.setGlobalCookies(null);
-                throw new BilibiliError("登录失败，请检查cookie");
+                throw new BilibiliError("登录失败，请检查cookie: " + cookiesStr);
             }
         }
     }

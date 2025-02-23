@@ -2,6 +2,7 @@ package ycyz.client;
 
 import lombok.Builder;
 import lombok.Data;
+import ycyz.pojo.enums.UrlType;
 
 import java.time.LocalDateTime;
 
@@ -27,4 +28,14 @@ public class DownloadArgs {
      * up名称
      */
     private String upName;
+
+    /**
+     * 下载url类型
+     */
+    private UrlType urlType;
+
+    /**
+     * 下载url
+     */
+    private String url;
 }
