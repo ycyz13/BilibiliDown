@@ -2,131 +2,101 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+<modelVersion>4.0.0</modelVersion>
 
-    <groupId>ycyz</groupId>
-    <artifactId>BiliSync</artifactId>
+<!-- 继承父项目 -->
+<parent>
+    <groupId>com.example</groupId>
+    <artifactId>parent-project</artifactId>
     <version>1.0-SNAPSHOT</version>
+    <relativePath>../parent/pom.xml</relativePath> <!-- 父项目的相对路径 -->
+</parent>
 
-    <parent>
+<!-- 本地 Java 项目的坐标 -->
+<artifactId>nicelee-bilibili</artifactId>
+
+<!-- 依赖 -->
+<dependencies>
+    <dependency>
+        <groupId>com.mysql</groupId>
+        <artifactId>mysql-connector-j</artifactId>
+        <version>8.0.33</version>
+    </dependency>
+    <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <version>1.18.26</version>
+    </dependency>
+    <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>4.13.2</version>
+    </dependency>
+    <dependency>
+        <groupId>org.freemarker</groupId>
+        <artifactId>freemarker</artifactId>
+        <version>2.3.28</version>
+    </dependency>
+    <dependency>
+        <groupId>core</groupId>
+        <artifactId>core</artifactId>
+        <version>3.3.3</version>
+        <scope>system</scope>
+        <systemPath>${project.basedir}/libs/core-3.3.3.jar</systemPath>
+    </dependency>
+    <dependency>
+        <groupId>jaf</groupId>
+        <artifactId>jaf</artifactId>
+        <version>1.1.1</version>
+        <scope>system</scope>
+        <systemPath>${project.basedir}/libs/jaf-1.1.1-activation.jar</systemPath>
+    </dependency>
+    <dependency>
+        <groupId>javax</groupId>
+        <artifactId>mail</artifactId>
+        <version>1.6.2</version>
+        <scope>system</scope>
+        <systemPath>${project.basedir}/libs/javax.mail-1.6.2.jar</systemPath>
+    </dependency>
+    <dependency>
+        <groupId>com.google.code.gson</groupId>
+        <artifactId>gson</artifactId>
+        <version>2.8.9</version>
+    </dependency>
+    <dependency>
         <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-dependencies</artifactId>
-        <version>2.7.12</version>
-    </parent>
+        <artifactId>spring-boot-starter-log4j2</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>javax.mail</groupId>
+        <artifactId>mail</artifactId>
+        <version>1.4.5</version>
+    </dependency>
 
-    <properties>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <mybatis-plus.version>3.5.2</mybatis-plus.version>
-        <mybatis-plus-generator.version>3.5.3</mybatis-plus-generator.version>
-    </properties>
+    <dependency>
+        <groupId>javax.activation</groupId>
+        <artifactId>activation</artifactId>
+        <version>1.1.1</version>
+    </dependency>
+</dependencies>
 
-    <dependencies>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
-            <exclusions>
-                <exclusion><!-- springboot默认是用logback的日志框架的 -->
-                    <groupId>org.springframework.boot</groupId>
-                    <artifactId>spring-boot-starter-logging</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.mysql</groupId>
-            <artifactId>mysql-connector-j</artifactId>
-            <version>8.0.33</version>
-        </dependency>
-        <dependency>
-            <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-boot-starter</artifactId>
-            <version>${mybatis-plus.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>1.18.26</version>
-        </dependency>
-        <dependency>
-            <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-generator</artifactId>
-            <version>${mybatis-plus-generator.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.13.2</version>
-        </dependency>
-        <dependency>
-            <groupId>org.freemarker</groupId>
-            <artifactId>freemarker</artifactId>
-            <version>2.3.28</version>
-        </dependency>
-        <dependency>
-            <groupId>core</groupId>
-            <artifactId>core</artifactId>
-            <version>3.3.3</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/libs/core-3.3.3.jar</systemPath>
-        </dependency>
-        <dependency>
-            <groupId>jaf</groupId>
-            <artifactId>jaf</artifactId>
-            <version>1.1.1</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/libs/jaf-1.1.1-activation.jar</systemPath>
-        </dependency>
-        <dependency>
-            <groupId>javax</groupId>
-            <artifactId>mail</artifactId>
-            <version>1.6.2</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/libs/javax.mail-1.6.2.jar</systemPath>
-        </dependency>
-        <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>2.8.9</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-log4j2</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>javax.mail</groupId>
-            <artifactId>mail</artifactId>
-            <version>1.4.5</version>
-        </dependency>
-
-        <dependency>
-            <groupId>javax.activation</groupId>
-            <artifactId>activation</artifactId>
-            <version>1.1.1</version>
-        </dependency>
-    </dependencies>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>repackage</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
+<build>
+    <sourceDirectory>src</sourceDirectory>
+    <resources>
+        <resource>
+            <directory>src</directory>
+        </resource>
+    </resources>
+    <plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>3.11.0</version> <!-- 使用最新版本 -->
+            <configuration>
+                <source>1.8</source> <!-- 设置为 Java 8 -->
+                <target>1.8</target> <!-- 设置为 Java 8 -->
+            </configuration>
+        </plugin>
+    </plugins>
+</build>
 </project>
