@@ -10,16 +10,12 @@ import java.util.regex.Matcher;
 
 import lombok.extern.slf4j.Slf4j;
 import nicelee.bilibili.enums.VideoQualityEnum;
-import nicelee.bilibili.exceptions.BilibiliError;
-import nicelee.bilibili.exceptions.ChargeException;
+import nicelee.bilibili.exceptions.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import nicelee.bilibili.API;
 import nicelee.bilibili.enums.DownloadModeEnum;
-import nicelee.bilibili.exceptions.ApiLinkQueryParseError;
-import nicelee.bilibili.exceptions.NoSubtitleException;
-import nicelee.bilibili.exceptions.QualityTooLowException;
 import nicelee.bilibili.model.ClipInfo;
 import nicelee.bilibili.model.StoryClipInfo;
 import nicelee.bilibili.model.VideoInfo;
@@ -409,6 +405,9 @@ public abstract class AbstractBaseParser implements IInputParser {
 			jObj = new JSONObject(json).getJSONObject("result");
 		}
 		int linkQN = jObj.getInt("quality");
+		if (linkQN == 64) {
+			throw new ChargeException1(String.format("质量为64（720P），可能为充电视频"), linkQN);
+		}
 		int highestQN = jObj.getJSONArray("support_formats").getJSONObject(0).getInt("quality");
 		if (linkQN != highestQN) {
 			String errMsg = String.format("最佳质量为: %d, 实际获得质量为: %d, 可能会员已失效.", highestQN, linkQN);
