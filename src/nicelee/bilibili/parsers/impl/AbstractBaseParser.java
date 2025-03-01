@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import lombok.extern.slf4j.Slf4j;
 import nicelee.bilibili.enums.VideoQualityEnum;
@@ -69,6 +70,9 @@ public abstract class AbstractBaseParser implements IInputParser {
 		String json = util.getContent(url, headers_json, HttpCookies.globalCookiesWithFingerprint());
 		Logger.println(url);
 		Logger.println(json);
+		if (json.contains("\"code\":-404,\"message\":\"啥都木有\"")) {
+			throw new VedioDeleteException("原视频已删除");
+		}
 		JSONArray array = new JSONObject(json).getJSONArray("data");
 
 		// 根据第一个获取总体大致信息
@@ -82,6 +86,11 @@ public abstract class AbstractBaseParser implements IInputParser {
 		detailUrl += API.genDmImgParams();
 		detailUrl = API.encWbi(detailUrl);
 		String detailJson = util.getContent(detailUrl, headers_json, HttpCookies.globalCookiesWithFingerprint());
+		Pattern regex = Pattern.compile("开通「(\\d+)元档包月充电」");
+		Matcher matcher = regex.matcher(detailJson);
+		if (matcher.find()) {
+			throw new ChargeException1("名字规则：开通「xx元档包月充电」");
+		}
 		Logger.println(detailUrl);
 		Logger.println(detailJson);
 		JSONObject detailRaw = new JSONObject(detailJson);
@@ -101,6 +110,7 @@ public abstract class AbstractBaseParser implements IInputParser {
 			viInfo.setAuthorId(String.valueOf(detailObj.getJSONObject("upper").getLong("mid")));
 			viInfo.setVideoPreview(detailObj.getString("cover"));
 		} else {
+			log.info("detailRaw:" + detailRaw.toString());
 			JSONObject detailObj = detailRaw.getJSONObject("data").getJSONObject("View");
 			ctime = detailObj.optLong("ctime") * 1000;
 			videoCnt = detailObj.optInt("videos");
@@ -405,9 +415,9 @@ public abstract class AbstractBaseParser implements IInputParser {
 			jObj = new JSONObject(json).getJSONObject("result");
 		}
 		int linkQN = jObj.getInt("quality");
-		if (linkQN == 64) {
-			throw new ChargeException1(String.format("质量为64（720P），可能为充电视频"), linkQN);
-		}
+//		if (linkQN == 64) {
+//			throw new ChargeException1(String.format("质量为64（720P），可能为充电视频"), linkQN);
+//		}
 		int highestQN = jObj.getJSONArray("support_formats").getJSONObject(0).getInt("quality");
 		if (linkQN != highestQN) {
 			String errMsg = String.format("最佳质量为: %d, 实际获得质量为: %d, 可能会员已失效.", highestQN, linkQN);
